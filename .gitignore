@@ -1,0 +1,22 @@
+# Secrets — NEVER commit these
+.env
+.env.local
+*.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Logs
+*.log
+
+# System
+.DS_Store
+Thumbs.db
+
+# Temp/scratch
+pt.txt
+pt2.txt

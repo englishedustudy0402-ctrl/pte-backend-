@@ -1,0 +1,84 @@
+# ============================================================================
+# PTE Mastery — Backend Render Blueprint
+# Deploys the FastAPI backend as a Docker Web Service on Render (free tier).
+#
+# USAGE (Render dashboard):
+#   1. New -> Blueprint -> connect this repo -> Render reads this file.
+#   2. Set the environment variables (EnvVars below) from .env / dashboard.
+#   3. Deploy. The service gets a public URL like
+#      https://pte-backend.onrender.com
+#   4. Point the frontend's NEXT_PUBLIC_API_URL at that URL and redeploy the
+#      frontend (frontend uses api endpoints which read NEXT_PUBLIC_API_URL).
+# ============================================================================
+services:
+  - type: web
+    name: pte-backend
+    runtime: docker
+    plan: free
+    rootDir: backend
+    dockerfilePath: Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true
+    # Render free tier spins down after ~15 min idle; /health keeps it warm-ish
+    # during active use and /ready gates traffic when Supabase is reachable.
+    # NOTE: free instances cold-start in ~1 min, which means the first request
+    # after idle may hang briefly. A paid (starter, $7/mo) instance stays warm.
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: FRONTEND_URL
+        value: https://englis-edu-study.com
+      # --- Tier 4c: reference-sentence force alignment (WhisperX). ---
+      # Default OFF: keeps the free-tier Docker image lean (WhisperX pulls in
+      # ~2GB of torch/transformers). Set to "true" in the dashboard to activate
+      # forced alignment; the acoustic-fused fallback otherwise handles scoring.
+      - key: USE_PHONEME_ALIGNER
+        sync: false
+      # --- Supabase (auth + DB + storage). Set real values in the dashboard. ---
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      # --- AI scoring (Groq). Comma-separated rotating keys. ---
+      - key: GROQ_API_KEYS
+        sync: false
+      - key: GROQ_BASE_URL
+        value: https://api.groq.com/openai/v1
+      - key: GROQ_MODEL
+        value: qwen/qwen3.8-27b
+      - key: GROQ_WHISPER_MODEL
+        value: whisper-large-v3-turbo
+      # --- OpenAI-compatible (xAI Grok) ---
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_BASE_URL
+        sync: false
+      - key: OPENAI_MODEL
+        sync: false
+      # --- WhatsApp / Twilio OTP (set when ready) ---
+      - key: WHATSAPP_DEFAULT_COUNTRY_CODE
+        value: "91"
+      - key: WHATSAPP_ACCESS_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_TEMPLATE_NAME
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_WHATSAPP_FROM
+        sync: false
+      # --- Anthropic (optional SST examiner) ---
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      # --- Payments (optional) ---
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
