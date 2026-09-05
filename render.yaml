@@ -15,7 +15,7 @@ services:
     name: pte-backend
     runtime: docker
     plan: free
-    rootDir: backend
+    rootDir: .
     dockerfilePath: Dockerfile
     healthCheckPath: /health
     autoDeploy: true
