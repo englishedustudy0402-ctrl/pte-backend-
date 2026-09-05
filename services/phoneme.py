@@ -35,14 +35,91 @@ import os
 # ---- Backend detection -------------------------------------------------------
 
 def aligner_available():
-    """True if a forced-alignment backend is configured/importable (Tier 4c)."""
-    if os.getenv("USE_PHONEME_ALIGNER", "").strip().lower() in ("1", "true", "yes"):
-        return True
+    """True if the WhisperX forced-alignment backend is importable (Tier 4c).
+
+    Explicitly disabled via USE_PHONEME_ALIGNER=0/false/no/off; otherwise the
+    presence of the installable package is the real signal (not just the env
+    var, so we never claim forced-align mode we cannot actually run).
+    """
+    if os.getenv("USE_PHONEME_ALIGNER", "").strip().lower() in ("0", "false", "no", "off"):
+        return False
     try:
         import whisperx  # noqa: F401
         return True
     except Exception:
         return False
+
+
+# ---- Tier 4c — real forced alignment (WhisperX) -------------------------------
+
+_ALIGN_CACHE = {}
+
+
+def _align_model(language_code, device):
+    """Load the wav2vec2 aligner + metadata once and cache them (Tier 4c)."""
+    import whisperx
+    key = (language_code, device)
+    if key not in _ALIGN_CACHE:
+        _ALIGN_CACHE[key] = whisperx.load_align_model(language_code, device)
+    return _ALIGN_CACHE[key]
+
+
+def word_alignments(sig, rate, reference_text, device=None, language_code="en"):
+    """Forced-align `reference_text` onto the waveform with WhisperX (Tier 4c).
+
+    This is the authoritative Tier 4c path: instead of guessing that transcript
+    words are evenly spaced, we locate every reference word at its TRUE acoustic
+    position. Returns the parse_timestamps shape ({word, start, end}) or [] when
+    the aligner is unavailable/fails — the caller then falls back to the even
+    spacing heuristic.
+    """
+    try:
+        import tempfile
+        import wave
+        import numpy as np
+        import whisperx
+    except Exception:
+        return []
+    if sig is None or rate <= 0 or len(sig) == 0:
+        return []
+    ref = (reference_text or "").strip()
+    if not ref:
+        return []
+
+    device = device or os.getenv("PHONEME_ALIGN_DEVICE", "cpu")
+
+    # PCM floats -> temporary 16-bit mono WAV so whisperx.load_audio (ffmpeg)
+    # can read and resample it to its native 16 kHz, exactly like a real upload.
+    sig = np.asarray(sig, dtype=np.float32)
+    peak = float(np.abs(sig).max())
+    scale = 32767.0 / peak if peak > 1.0 else 32767.0
+    pcm = np.clip(sig * scale, -32768, 32767).astype(np.int16)
+
+    fd, path = tempfile.mkstemp(suffix=".wav")
+    try:
+        with wave.open(path, "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(int(rate))
+            w.writeframes(pcm.tobytes())
+
+        audio = whisperx.load_audio(path)
+        model_a, metadata = _align_model(language_code, device)
+        dur = float(len(pcm)) / rate
+        segments = [{"start": 0.0, "end": max(dur, 0.1), "text": ref}]
+        aligned = whisperx.align(
+            segments, model_a, metadata, audio, device,
+            return_char_alignments=False,
+        )
+        return parse_timestamps(aligned.get("word_segments"))
+    except Exception:
+        return []
+    finally:
+        os.close(fd)
+        try:
+            os.remove(path)
+        except OSError:
+            pass
 
 
 def parse_timestamps(timestamps):

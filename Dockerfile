@@ -11,11 +11,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Audio/system libs needed for decoding uploads and (optionally) WhisperX
-# forced alignment (Tier 4c). Kept minimal for the free-tier image.
+# Audio/system libs needed for decoding uploads and WhisperX forced alignment
+# (Tier 4c — active). build-essential/git cover the compiled deps WhisperX and
+# torchaudio pull in during pip install.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ffmpeg \
         libsndfile1 \
+        build-essential \
+        git \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .

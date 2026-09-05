@@ -520,12 +520,21 @@ async def score_speaking(
                 voiced_s = float(audio_feats.get("voiced_s") or 0.0)
                 words = [w for w in transcript.split() if w.strip()]
                 if pcm_sig is not None and voiced_s > 0 and len(words) > 0:
-                    step = voiced_s / len(words)
-                    timestamps = [
-                        {"word": words[i], "start": round(i * step, 3),
-                         "end": round((i + 1) * step, 3)}
-                        for i in range(len(words))
-                    ]
+                    # Tier 4c — real forced alignment of the REFERENCE onto the
+                    # recording (WhisperX) when available: word windows below
+                    # come from true acoustic positions instead of a uniform
+                    # spread across the voiced audio.
+                    timestamps = None
+                    if reference_text and phoneme_svc.aligner_available():
+                        timestamps = phoneme_svc.word_alignments(
+                            pcm_sig, pcm_rate, reference_text)
+                    if not timestamps:
+                        step = voiced_s / len(words)
+                        timestamps = [
+                            {"word": words[i], "start": round(i * step, 3),
+                             "end": round((i + 1) * step, 3)}
+                            for i in range(len(words))
+                        ]
                     ph = phoneme_svc.phoneme_pronunciation(pcm_sig, pcm_rate, timestamps)
                     if ph["pron90"] > 10:
                         # authoritative pron: phoneme estimate overrides the

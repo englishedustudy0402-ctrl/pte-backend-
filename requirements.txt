@@ -11,14 +11,12 @@ python-dateutil>=2.9.0.post0
 razorpay>=1.4.0
 
 # ---------------------------------------------------------------------------
-# Tier 4c — reference-sentence force alignment via WhisperX (optional).
-# Deliberately NOT installed by default: these pull in ~2GB of torch /
-# transformer weights that bloat the free-tier Render image and slow builds.
-# To activate: uncomment the block below AND set USE_PHONEME_ALIGNER=true in
-# the Render dashboard env vars (see render.yaml). The acoustic-fused phoneme
-# scorer (services/phoneme.py) remains the default until then.
+# Tier 4c — reference-sentence force alignment via WhisperX (Repeat Sentence /
+# Read Aloud word-level marking). Now ACTIVE (enabled in render.yaml); adds
+# ~2GB of torch/transformers to the image. When the model is unavailable the
+# acoustic-fused phoneme scorer (services/phoneme.py) still handles scoring.
 # ---------------------------------------------------------------------------
-# whisperx
-# torch
-# torchaudio
-# transformers
+whisperx
+torch
+torchaudio
+transformers

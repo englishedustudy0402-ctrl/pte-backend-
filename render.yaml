@@ -31,11 +31,11 @@ services:
       - key: FRONTEND_URL
         value: https://englis-edu-study.com
       # --- Tier 4c: reference-sentence force alignment (WhisperX). ---
-      # Default OFF: keeps the free-tier Docker image lean (WhisperX pulls in
-      # ~2GB of torch/transformers). Set to "true" in the dashboard to activate
-      # forced alignment; the acoustic-fused fallback otherwise handles scoring.
+      # WhisperX is installed (requirements.txt) and enabled: Repeat Sentence /
+      # Read Aloud words are placed at real acoustic positions. The acoustic-
+      # fused fallback still handles scoring if the aligner fails.
       - key: USE_PHONEME_ALIGNER
-        sync: false
+        value: "true"
       # --- Supabase (auth + DB + storage). Set real values in the dashboard. ---
       - key: SUPABASE_URL
         sync: false
